@@ -3,6 +3,7 @@ package main
 import (
 	"flag"
 	"fmt"
+	"gozero/pkg/interceptors"
 
 	"gozero/application/user/internal/config"
 	"gozero/application/user/internal/server"
@@ -32,6 +33,10 @@ func main() {
 			reflection.Register(grpcServer)
 		}
 	})
+
+	// 自定义拦截器
+	s.AddUnaryInterceptors(interceptors.ServerErrorInterceptor())
+
 	defer s.Stop()
 
 	fmt.Printf("Starting rpc server at %s...\n", c.ListenOn)
