@@ -8,10 +8,6 @@ Auth:
   RefreshExpire: 2592000
   RefreshAfter: 604800
 Oss:
-  Endpoint: oss-cn-hangzhou.aliyuncs.com
-  AccessKeyId: LTAI5tDHkXRkf4Kv54mL3ba1
-  AccessKeySecret: JzZBgxVByhf8j05vLAucswCAGkYdFz
-  BucketName: ex-article
 ArticleRPC:
   Etcd:
     Hosts:
