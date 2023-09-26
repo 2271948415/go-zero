@@ -1,5 +1,5 @@
-create database beyond_user;
-use beyond_user;
+create database gozero_user;
+use gozero_user;
 
 CREATE TABLE `user` (
   `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT COMMENT '主键ID',

@@ -2,6 +2,7 @@ package logic
 
 import (
 	"context"
+	"github.com/google/uuid"
 	"gozero/application/user/code"
 	"gozero/application/user/internal/model"
 	"time"
@@ -30,8 +31,9 @@ func (l *RegisterLogic) Register(in *service.RegisterRequest) (*service.Register
 	if len(in.Username) == 0 {
 		return nil, code.RegisterNameEmpty
 	}
-
-	ret, err := l.svcCtx.UserModel.Insert(l.ctx, &model.User{
+	userId := uuid.NewString()
+	_, err := l.svcCtx.UserModel.Insert(l.ctx, &model.User{
+		Id:         userId,
 		Username:   in.Username,
 		Mobile:     in.Mobile,
 		Avatar:     in.Avatar,
@@ -40,11 +42,6 @@ func (l *RegisterLogic) Register(in *service.RegisterRequest) (*service.Register
 	})
 	if err != nil {
 		logx.Errorf("Register req: %v error: %v", in, err)
-		return nil, err
-	}
-	userId, err := ret.LastInsertId()
-	if err != nil {
-		logx.Errorf("LastInsertId error: %v", err)
 		return nil, err
 	}
 

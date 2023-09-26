@@ -19,7 +19,7 @@ import (
 var (
 	userFieldNames          = builder.RawFieldNames(&User{})
 	userRows                = strings.Join(userFieldNames, ",")
-	userRowsExpectAutoSet   = strings.Join(stringx.Remove(userFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), ",")
+	userRowsExpectAutoSet   = strings.Join(stringx.Remove(userFieldNames, "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), ",")
 	userRowsWithPlaceHolder = strings.Join(stringx.Remove(userFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), "=?,") + "=?"
 
 	cacheGozeroUserIdPrefix = "cache:gozero:user:id:"
@@ -28,9 +28,9 @@ var (
 type (
 	userModel interface {
 		Insert(ctx context.Context, data *User) (sql.Result, error)
-		FindOne(ctx context.Context, id int64) (*User, error)
+		FindOne(ctx context.Context, id string) (*User, error)
 		Update(ctx context.Context, data *User) error
-		Delete(ctx context.Context, id int64) error
+		Delete(ctx context.Context, id string) error
 	}
 
 	defaultUserModel struct {
@@ -39,7 +39,7 @@ type (
 	}
 
 	User struct {
-		Id         int64     `db:"id"`          // 主键ID
+		Id         string    `db:"id"`          // 主键ID
 		Username   string    `db:"username"`    // 用户名
 		Avatar     string    `db:"avatar"`      // 头像
 		Mobile     string    `db:"mobile"`      // 手机号
@@ -62,7 +62,7 @@ func (m *defaultUserModel) withSession(session sqlx.Session) *defaultUserModel {
 	}
 }
 
-func (m *defaultUserModel) Delete(ctx context.Context, id int64) error {
+func (m *defaultUserModel) Delete(ctx context.Context, id string) error {
 	gozeroUserIdKey := fmt.Sprintf("%s%v", cacheGozeroUserIdPrefix, id)
 	_, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
 		query := fmt.Sprintf("delete from %s where `id` = ?", m.table)
@@ -71,7 +71,7 @@ func (m *defaultUserModel) Delete(ctx context.Context, id int64) error {
 	return err
 }
 
-func (m *defaultUserModel) FindOne(ctx context.Context, id int64) (*User, error) {
+func (m *defaultUserModel) FindOne(ctx context.Context, id string) (*User, error) {
 	gozeroUserIdKey := fmt.Sprintf("%s%v", cacheGozeroUserIdPrefix, id)
 	var resp User
 	err := m.QueryRowCtx(ctx, &resp, gozeroUserIdKey, func(ctx context.Context, conn sqlx.SqlConn, v any) error {
@@ -91,8 +91,8 @@ func (m *defaultUserModel) FindOne(ctx context.Context, id int64) (*User, error)
 func (m *defaultUserModel) Insert(ctx context.Context, data *User) (sql.Result, error) {
 	gozeroUserIdKey := fmt.Sprintf("%s%v", cacheGozeroUserIdPrefix, data.Id)
 	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
-		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?)", m.table, userRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.Username, data.Avatar, data.Mobile)
+		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?)", m.table, userRowsExpectAutoSet)
+		return conn.ExecCtx(ctx, query, data.Id, data.Username, data.Avatar, data.Mobile)
 	}, gozeroUserIdKey)
 	return ret, err
 }
