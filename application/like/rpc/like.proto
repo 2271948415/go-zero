@@ -1,0 +1,39 @@
+syntax = "proto3";
+
+package service;
+option go_package="./service";
+
+service like {
+  rpc Thumbup(ThumbupRequest)returns (ThumbupResponse);
+  rpc IsThumbup(IsThumbupRequest)returns (IsThumbupResponse);
+}
+
+message ThumbupRequest {
+  string bizId = 1; // 业务id
+  string objId = 2; // 点赞对象id
+  string userId  = 3; // 用户id
+  int32 likeType = 4; // 类型
+}
+
+message ThumbupResponse {
+  string bizId = 1; // 业务id
+  string objId = 2; // 点赞对象id
+  int64 likeNum = 3; // 点赞数
+  int64 dislikeNum = 4; // 点踩数
+}
+
+message IsThumbupRequest {
+  string bizId = 1; // 业务id
+  string targetId = 2; // 点赞对象id
+  string userId  = 3; // 用户id
+}
+
+message IsThumbupResponse {
+  map<string, UserThumbup> userThumbups = 1;
+}
+
+message UserThumbup {
+  string userId = 1;
+  int64 thumbupTime = 2;
+  int32 likeType = 3; // 类型
+}
