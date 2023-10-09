@@ -10,7 +10,6 @@ import (
 	"time"
 
 	"github.com/zeromicro/go-zero/core/stores/builder"
-	"github.com/zeromicro/go-zero/core/stores/cache"
 	"github.com/zeromicro/go-zero/core/stores/sqlc"
 	"github.com/zeromicro/go-zero/core/stores/sqlx"
 	"github.com/zeromicro/go-zero/core/stringx"
@@ -21,8 +20,6 @@ var (
 	articleRows                = strings.Join(articleFieldNames, ",")
 	articleRowsExpectAutoSet   = strings.Join(stringx.Remove(articleFieldNames, "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), ",")
 	articleRowsWithPlaceHolder = strings.Join(stringx.Remove(articleFieldNames, "`id`", "`create_at`", "`create_time`", "`created_at`", "`update_at`", "`update_time`", "`updated_at`"), "=?,") + "=?"
-
-	cacheGozeroArticleArticleIdPrefix = "cache:gozeroArticle:article:id:"
 )
 
 type (
@@ -34,7 +31,7 @@ type (
 	}
 
 	defaultArticleModel struct {
-		sqlc.CachedConn
+		conn  sqlx.SqlConn
 		table string
 	}
 
@@ -58,36 +55,30 @@ type (
 	}
 )
 
-func newArticleModel(conn sqlx.SqlConn, c cache.CacheConf, opts ...cache.Option) *defaultArticleModel {
+func newArticleModel(conn sqlx.SqlConn) *defaultArticleModel {
 	return &defaultArticleModel{
-		CachedConn: sqlc.NewConn(conn, c, opts...),
-		table:      "`article`",
+		conn:  conn,
+		table: "`article`",
 	}
 }
 
 func (m *defaultArticleModel) withSession(session sqlx.Session) *defaultArticleModel {
 	return &defaultArticleModel{
-		CachedConn: m.CachedConn.WithSession(session),
-		table:      "`article`",
+		conn:  sqlx.NewSqlConnFromSession(session),
+		table: "`article`",
 	}
 }
 
 func (m *defaultArticleModel) Delete(ctx context.Context, id string) error {
-	gozeroArticleArticleIdKey := fmt.Sprintf("%s%v", cacheGozeroArticleArticleIdPrefix, id)
-	_, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
-		query := fmt.Sprintf("delete from %s where `id` = ?", m.table)
-		return conn.ExecCtx(ctx, query, id)
-	}, gozeroArticleArticleIdKey)
+	query := fmt.Sprintf("delete from %s where `id` = ?", m.table)
+	_, err := m.conn.ExecCtx(ctx, query, id)
 	return err
 }
 
 func (m *defaultArticleModel) FindOne(ctx context.Context, id string) (*Article, error) {
-	gozeroArticleArticleIdKey := fmt.Sprintf("%s%v", cacheGozeroArticleArticleIdPrefix, id)
+	query := fmt.Sprintf("select %s from %s where `id` = ? limit 1", articleRows, m.table)
 	var resp Article
-	err := m.QueryRowCtx(ctx, &resp, gozeroArticleArticleIdKey, func(ctx context.Context, conn sqlx.SqlConn, v any) error {
-		query := fmt.Sprintf("select %s from %s where `id` = ? limit 1", articleRows, m.table)
-		return conn.QueryRowCtx(ctx, v, query, id)
-	})
+	err := m.conn.QueryRowCtx(ctx, &resp, query, id)
 	switch err {
 	case nil:
 		return &resp, nil
@@ -99,30 +90,15 @@ func (m *defaultArticleModel) FindOne(ctx context.Context, id string) (*Article,
 }
 
 func (m *defaultArticleModel) Insert(ctx context.Context, data *Article) (sql.Result, error) {
-	gozeroArticleArticleIdKey := fmt.Sprintf("%s%v", cacheGozeroArticleArticleIdPrefix, data.Id)
-	ret, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
-		query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, articleRowsExpectAutoSet)
-		return conn.ExecCtx(ctx, query, data.Id, data.Title, data.Content, data.Cover, data.Description, data.AuthorId, data.Status, data.CommentNum, data.LikeNum, data.CollectNum, data.ViewNum, data.ShareNum, data.TagIds, data.PublishTime)
-	}, gozeroArticleArticleIdKey)
+	query := fmt.Sprintf("insert into %s (%s) values (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", m.table, articleRowsExpectAutoSet)
+	ret, err := m.conn.ExecCtx(ctx, query, data.Id, data.Title, data.Content, data.Cover, data.Description, data.AuthorId, data.Status, data.CommentNum, data.LikeNum, data.CollectNum, data.ViewNum, data.ShareNum, data.TagIds, data.PublishTime)
 	return ret, err
 }
 
 func (m *defaultArticleModel) Update(ctx context.Context, data *Article) error {
-	gozeroArticleArticleIdKey := fmt.Sprintf("%s%v", cacheGozeroArticleArticleIdPrefix, data.Id)
-	_, err := m.ExecCtx(ctx, func(ctx context.Context, conn sqlx.SqlConn) (result sql.Result, err error) {
-		query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, articleRowsWithPlaceHolder)
-		return conn.ExecCtx(ctx, query, data.Title, data.Content, data.Cover, data.Description, data.AuthorId, data.Status, data.CommentNum, data.LikeNum, data.CollectNum, data.ViewNum, data.ShareNum, data.TagIds, data.PublishTime, data.Id)
-	}, gozeroArticleArticleIdKey)
+	query := fmt.Sprintf("update %s set %s where `id` = ?", m.table, articleRowsWithPlaceHolder)
+	_, err := m.conn.ExecCtx(ctx, query, data.Title, data.Content, data.Cover, data.Description, data.AuthorId, data.Status, data.CommentNum, data.LikeNum, data.CollectNum, data.ViewNum, data.ShareNum, data.TagIds, data.PublishTime, data.Id)
 	return err
-}
-
-func (m *defaultArticleModel) formatPrimary(primary any) string {
-	return fmt.Sprintf("%s%v", cacheGozeroArticleArticleIdPrefix, primary)
-}
-
-func (m *defaultArticleModel) queryPrimary(ctx context.Context, conn sqlx.SqlConn, v, primary any) error {
-	query := fmt.Sprintf("select %s from %s where `id` = ? limit 1", articleRows, m.table)
-	return conn.QueryRowCtx(ctx, v, query, primary)
 }
 
 func (m *defaultArticleModel) tableName() string {

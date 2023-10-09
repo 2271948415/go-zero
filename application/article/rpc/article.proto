@@ -5,6 +5,9 @@ option go_package="./pb";
 
 service Article {
   rpc Publish(PublishRequest) returns (PublishResponse);
+  rpc Articles(ArticlesRequest) returns (ArticlesResponse);
+  rpc ArticleDelete(ArticleDeleteRequest) returns (ArticleDeleteResponse);
+  rpc ArticleDetail(ArticleDetailRequest) returns (ArticleDetailResponse);
 }
 
 message PublishRequest {
@@ -17,4 +20,47 @@ message PublishRequest {
 
 message PublishResponse {
   string articleId = 1;
+}
+
+message ArticlesRequest {
+  string userId = 1;
+  int64 cursor = 2;
+  int64 pageSize = 3;
+  int32 sortType = 4;
+  string articleId = 5;
+}
+
+message ArticleItem {
+  string Id = 1;
+  string title = 2;
+  string content = 3;
+  string description = 4;
+  string cover = 5;
+  int64 commentCount = 6;
+  int64 likeCount = 7;
+  int64 publishTime = 8;
+}
+
+
+message ArticlesResponse {
+    repeated ArticleItem articles = 1;
+    bool isEnd = 2;
+    int64 cursor = 3;
+    string articleId = 4;
+}
+
+message ArticleDeleteRequest {
+  string userId = 1;
+  string articleId = 2;
+}
+
+message ArticleDeleteResponse {
+}
+
+message ArticleDetailRequest {
+  string articleId = 1;
+}
+
+message ArticleDetailResponse {
+  ArticleItem article = 1;
 }
