@@ -1,0 +1,16 @@
+Name: mq
+KqConsumerConf:
+  Name: like-kq-consumer
+  Brokers:
+    - 127.0.1:9092
+  Group: group-like-event
+  Topic: topic-like-event
+  Offset: last
+  Consumers: 1
+  Processors: 1
+
+DB:
+  DataSource: "root:admin@tcp(127.0.0.1:3306)/gozero_like?parseTime=true&loc=Local"
+  MaxIdleConns: 10
+  MaxOpenConns: 100
+  ConnMaxLifetime: 3600
